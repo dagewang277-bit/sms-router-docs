@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电销与催收线路路由业务逻辑</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .nav {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .nav h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav li {
+            background: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #555;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .nav li:hover {
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: #fafbfc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .section h3 {
+            color: #555;
+            font-size: 20px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .section h4 {
+            color: #666;
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+
+        .section p {
+            margin-bottom: 15px;
+            color: #555;
+            text-align: justify;
+        }
+
+        .section ul, .section ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        .section li {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .highlight-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .highlight-box strong {
+            color: #856404;
+        }
+
+        .rule-box {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .rule-box h4 {
+            color: #667eea;
+            margin-top: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        table tbody tr:hover {
+            background: #f8f9fa;
+            transition: background 0.3s;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: #fafbfc;
+        }
+
+        table tbody tr:nth-child(even):hover {
+            background: #f0f1f2;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .priority-high {
+            background: #dc3545;
+        }
+
+        .priority-medium {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .priority-low {
+            background: #28a745;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .footer p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+            
+            table {
+                font-size: 14px;
+            }
+            
+            table th, table td {
+                padding: 10px;
+            }
+
+            .nav ul {
+                flex-direction: column;
+            }
+        }
+
+        .keyword {
+            background: #e7f3ff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #0066cc;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📞 电销与催收线路路由业务逻辑</h1>
+            <p>针对中国市场的智能路由策略与规则框架</p>
+        </div>
+
+        <div class="content">
+            <div class="nav">
+                <h3>📋 内容导航</h3>
+                <ul>
+                    <li>核心痛点</li>
+                    <li>码号分类</li>
+                    <li>健康度监控</li>
+                    <li>供应商分层</li>
+                    <li>信号反馈</li>
+                    <li>路由框架</li>
+                    <li>关键建议</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>🎯 核心痛点</h2>
+                <p>针对中国市场的业务逻辑，电销与催收的线路路由不仅要看接通率，更要解决以下<span class="keyword">三大核心痛点</span>：</p>
+                <div class="highlight-box">
+                    <strong>⚠️ 核心挑战：</strong>
+                    <ul>
+                        <li><strong>高频防封</strong> - 避免因高频呼叫导致的号码封禁</li>
+                        <li><strong>号码标识</strong> - 管理号码被标记"骚扰"等负面标识</li>
+                        <li><strong>各省份落地成功率</strong> - 确保不同区域的呼叫成功率</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>1️⃣ 码号分类与匹配规则 (Categorization)</h2>
+                
+                <div class="rule-box">
+                    <h4>📱 按号段属性路由</h4>
+                    <ul>
+                        <li><strong>手机号线路</strong>：主要用于电销，接通率最高，但极易被标记。路由应优先分配给<span class="keyword">高意向客户</span>。</li>
+                        <li><strong>固定电话/95/96线路</strong>：主要用于正式催收，专业感强。路由应根据各供应商在不同省份的固话落地能力进行<span class="keyword">排名</span>。</li>
+                        <li><strong>虚拟号/中间号</strong>：用于初次触达，平衡成本与隐私。</li>
+                    </ul>
+                </div>
+
+                <div class="rule-box">
+                    <h4>📍 归属地对齐 (Geo-Matching)</h4>
+                    <ul>
+                        <li>中国用户对异地号码接听意愿低。</li>
+                        <li>路由规则应设置为：<strong>主叫归属地 = 被叫归属地</strong>。</li>
+                        <li>若供应商 A 无法提供目标城市号码，路由自动切换至有该城市资源的<span class="keyword">供应商 B</span>。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>2️⃣ 号码"健康度"动态监控 (Reputation Management)</h2>
+                
+                <div class="rule-box">
+                    <h4>🔍 标记清除与预警</h4>
+                    <ul>
+                        <li>对接主流手机管家（<span class="keyword">腾讯、360、百度</span>）的标识接口。</li>
+                        <li><strong>自动下线规则</strong>：一旦某个号码被标记为"骚扰"或"催收"次数超过设定阈值（如 <span class="tag">5 次</span>），路由系统自动将该号码及其关联供应商<span class="keyword">降权</span>，进入<span class="keyword">冷冻期</span>。</li>
+                    </ul>
+                </div>
+
+                <div class="rule-box">
+                    <h4>⚡ 高频熔断机制</h4>
+                    <ul>
+                        <li>针对中国运营商的监管政策，设置单号拨打频率红线。</li>
+                        <li><strong>示例规则</strong>：
+                            <ul>
+                                <li>单号码每小时拨打不超过 <span class="tag">15 次</span></li>
+                                <li>每天不超过 <span class="tag">80 次</span></li>
+                            </ul>
+                        </li>
+                        <li>路由系统需在各供应商号码池间进行<span class="keyword">"洗牌式"轮询</span>。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>3️⃣ 供应商性能分层 (Multi-Tier Performance)</h2>
+                
+                <div class="rule-box">
+                    <h4><span class="tag priority-high">第一优先级</span> 高接通"白名单"线路</h4>
+                    <ul>
+                        <li>对于 <strong>M0-M1 阶段催收</strong> 或 <strong>优质续贷电销</strong>，路由强制走<span class="keyword">三大运营商直连</span>的优质线路，确保通话质量和显号率。</li>
+                    </ul>
+                </div>
+
+                <div class="rule-box">
+                    <h4><span class="tag priority-medium">第二优先级</span> 并发性线路</h4>
+                    <ul>
+                        <li>对于 <strong>M2+ 催收</strong> 或 <strong>海量存量唤醒</strong>，接通率排名权重降低，<span class="keyword">并发能力</span>和<span class="keyword">单分钟单价（LCR）</span>权重提高。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>4️⃣ 实时信号反馈分析 (SIP Signal Logic)</h2>
+                
+                <div class="rule-box">
+                    <h4>📡 信令细分路由</h4>
+                    <ul>
+                        <li><strong>空号/关机情况</strong>：如果供应商返回的是"空号/关机"，路由系统应立即触发<span class="keyword">"二次验证"</span>，调用另一个供应商的查询服务。</li>
+                        <li><strong>黑名单拦截情况</strong>：如果供应商返回的是"黑名单拦截"（说明该供应商的号段被运营商风控屏蔽），系统应立即自动切换至另一个<span class="keyword">号段库完全不同</span>的供应商。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>5️⃣ 推荐的 IT 路由逻辑框架</h2>
+                <p>建议让 IT 部门建立一个 <span class="keyword">"供应商画像看板"</span>，规则权重可按以下优先级动态调整：</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>维度</th>
+                            <th>规则描述</th>
+                            <th>催收权重</th>
+                            <th>电销权重</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>接通率 (ASR)</strong></td>
+                            <td>过去 15 分钟的实时接通表现</td>
+                            <td><span class="tag priority-high">高</span></td>
+                            <td><span class="tag priority-high">高</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>归属地匹配</strong></td>
+                            <td>主被叫地一致性</td>
+                            <td><span class="tag priority-medium">中</span></td>
+                            <td><span class="tag priority-high">极高</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>号码标记度</strong></td>
+                            <td>外部平台标识反馈</td>
+                            <td><span class="tag priority-high">极高</span></td>
+                            <td><span class="tag priority-high">高</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>单价成本</strong></td>
+                            <td>阶梯计费与结算成本</td>
+                            <td><span class="tag priority-low">低</span></td>
+                            <td><span class="tag priority-medium">中</span> (调整为单客成本)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>运营商配比</strong></td>
+                            <td>移动/联通/电信各线路分布</td>
+                            <td><span class="tag priority-medium">中</span></td>
+                            <td><span class="tag priority-medium">中</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <h4>📊 补充指标维度：</h4>
+                    <ul>
+                        <li><strong>接通率</strong> - 过去15分钟实时表现</li>
+                        <li><strong>转语音信箱率</strong> - 衡量号码质量</li>
+                        <li><strong>归属地匹配</strong> - 要求供应商做归属地匹配、我司做检测</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>💡 关键建议</h2>
+                <div class="highlight-box">
+                    <p><strong>🎯 行业趋势：</strong></p>
+                    <p>针对中国业务，目前的趋势是<span class="keyword">"号码资源比线路更贵"</span>。</p>
+                </div>
+                
+                <h3>建议路由系统增加一个 <span class="keyword">"号码池健康度预测"</span> 算法：</h3>
+                <ul>
+                    <li>如果某家供应商的号码池<span class="keyword">长时间不更新</span>，即便当前接通率尚可，也应在路由排名中<span class="keyword">减分</span>。</li>
+                    <li>提前预防<span class="keyword">大面积封号</span>导致的业务停摆。</li>
+                </ul>
+
+                <div class="rule-box" style="margin-top: 30px; background: #e7f3ff; border-color: #0066cc;">
+                    <h4>❓ 后续问题</h4>
+                    <p><strong>是否需要 IT 部门针对催收的不同逾期天数（M阶段）设置不同的路由分配逻辑？</strong></p>
+                    <p style="margin-top: 10px;">例如：</p>
+                    <ul>
+                        <li><strong>M0-M1</strong>：优质线路，高接通率优先</li>
+                        <li><strong>M2-M3</strong>：平衡接通率与成本</li>
+                        <li><strong>M4+</strong>：成本控制优先，并发能力优先</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>📄 文档生成时间：<span id="currentDate"></span></p>
+            <p style="margin-top: 10px;">建议与 IT 部门协作，根据实际业务需求调整路由规则权重</p>
+        </div>
+    </div>
+
+    <script>
+        // 设置当前日期
+        const now = new Date();
+        const dateStr = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日';
+        document.getElementById('currentDate').textContent = dateStr;
+
+        // 平滑滚动到对应部分（为导航项添加交互）
+        document.querySelectorAll('.nav li').forEach((item, index) => {
+            item.addEventListener('click', function() {
+                const sections = document.querySelectorAll('.section');
+                if (sections[index]) {
+                    sections[index].scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
